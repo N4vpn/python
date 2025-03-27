@@ -139,8 +139,8 @@ async def process_api_requests_for_db(db_id, pbar, counters):
         await asyncio.gather(*tasks)
 
 
+# နောက်ဆုံး run_all() function တွင် log သိမ်းနိုင်အောင်
 async def run_all():
-    # Global counters
     counters = {
         "total": 0,
         "dash_success": 0,
@@ -148,17 +148,35 @@ async def run_all():
         "claim_found": 0,
         "claim_not_found": 0
     }
-    # Create a tqdm progress bar with unknown total (we update total as we go)
-    with tqdm(total=0, desc="Processing phones", dynamic_ncols=True) as pbar:
-        db_ids = list(range(1,2))  # db_id 1 through 30
-        for db_id in db_ids:
-            await process_api_requests_for_db(db_id, pbar, counters)
-        pbar.close()
-    # Final summary log (printed after the progress bar completes)
-    print(f"\nFinal Summary -> Total Process: {counters['total']}, Dashboard Success: {counters['dash_success']}, "
-          f"Dashboard Fail: {counters['dash_fail']}, Claim Found: {counters['claim_found']}, "
-          f"Claim Not Found: {counters['claim_not_found']}")
-
+    
+    # Log file ဖန်တီးခြင်း
+    log_file = "bot_execution.log"
+    with open(log_file, "a", encoding="utf-8") as f:
+        f.write(f"\n\n=== Execution started at {datetime.datetime.now()} ===\n")
+    
+    try:
+        with tqdm(total=0, desc="Processing phones") as pbar:
+            db_ids = list(range(1,2))
+            for db_id in db_ids:
+                await process_api_requests_for_db(db_id, pbar, counters)
+        
+        # Final log
+        final_log = (f"\nFinal Summary -> Total Process: {counters['total']}, "
+                    f"Dashboard Success: {counters['dash_success']}, "
+                    f"Dashboard Fail: {counters['dash_fail']}, "
+                    f"Claim Found: {counters['claim_found']}, "
+                    f"Claim Not Found: {counters['claim_not_found']}")
+        
+        print(final_log)
+        with open(log_file, "a", encoding="utf-8") as f:
+            f.write(final_log)
+            
+    except Exception as e:
+        error_msg = f"\nERROR: {str(e)}"
+        print(error_msg)
+        with open(log_file, "a", encoding="utf-8") as f:
+            f.write(error_msg)
+        raise
 
 if __name__ == "__main__":
     asyncio.run(run_all())

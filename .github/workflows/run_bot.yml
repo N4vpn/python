@@ -1,0 +1,36 @@
+name: Atom Claim Bot
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'  # 5 minutes တစ်ခါ run
+  workflow_dispatch:       # Manual run လုပ်လို့ရအောင်
+
+jobs:
+  run-bot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15    # 15 မိနစ်ကြာရင် auto-cancel
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Run Atom Claim Bot
+      run: python net.py
+
+    - name: Upload logs
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: bot-logs
+        path: |
+          backup_*.json
+          *.log

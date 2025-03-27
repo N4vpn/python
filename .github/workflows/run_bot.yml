@@ -1,8 +1,8 @@
-name: Atom Claim Bot (12hr)
+name: Atom Claim Bot
 
 on:
   schedule:
-    - cron: '0 */12 * * *'  # UTC 00:00 နဲ့ 12:00
+    - cron: '0 */12 * * *'
   workflow_dispatch:
 
 jobs:
@@ -19,15 +19,15 @@ jobs:
         python-version: '3.11'
     
     - name: Install dependencies
-      run: |
-        pip install aiohttp tqdm
-        
+      run: pip install aiohttp tqdm
+      
     - name: Run Bot
       run: python net.py
       
-    - name: Save logs
+    - name: Upload Output
       uses: actions/upload-artifact@v4
-      if: always()
       with:
-        name: bot-logs
-        path: backup_*.json
+        name: output-files
+        path: |
+          output.json
+          backup_*.json

@@ -16,7 +16,6 @@ COMMON_HEADERS = {
     "Device-Name": "Xiaomi Redmi Note 8 Pro"
 }
 
-
 async def fetch_json_data(session, api_url, db_id):
     try:
         async with session.get(api_url, headers=COMMON_HEADERS) as response:
@@ -24,12 +23,12 @@ async def fetch_json_data(session, api_url, db_id):
                 data = await response.json()
                 backup_file = f"backup_{db_id}.json"
                 with open(backup_file, "w", encoding="utf-8") as f:
-                    json.dump(data, f, indent=4)
+                    json.dump(data, f, indent=4, ensure_ascii=False)
                 return data
             return None
-    except Exception:
+    except Exception as e:
+        print(f"Error fetching data for DB {db_id}: {str(e)}")
         return None
-
 
 async def get_claimable_id(session, access_token, msisdn, userid):
     params = {
@@ -48,9 +47,9 @@ async def get_claimable_id(session, access_token, msisdn, userid):
                         return str(attribute.get("id", "no"))
                 return "no"
             return "error"
-    except Exception:
+    except Exception as e:
+        print(f"Error getting claimable ID for {msisdn}: {str(e)}")
         return "error"
-
 
 async def process_claim(session, access_token, msisdn, userid, claim_id):
     params = {
@@ -59,24 +58,22 @@ async def process_claim(session, access_token, msisdn, userid, claim_id):
         "v": "4.11.0"
     }
     headers = {**COMMON_HEADERS, "Authorization": f"Bearer {access_token}"}
-    payload = {"id": int(float(claim_id))}  # Handles Java's double parsing logic
+    payload = {"id": int(float(claim_id))}
     try:
         async with session.post(CLAIM_URL, params=params, json=payload, headers=headers) as response:
             return response.status == 200
-    except Exception:
+    except Exception as e:
+        print(f"Error processing claim for {msisdn}: {str(e)}")
         return False
-
 
 async def handle_claim(session, item):
     msisdn = item["phone"]
     access_token = item["access"]
     userid = item["userid"]
     claim_id = await get_claimable_id(session, access_token, msisdn, userid)
-    # If error or "no" available id, treat as not found.
     if claim_id in ["no", "error"]:
         return False
     return await process_claim(session, access_token, msisdn, userid, claim_id)
-
 
 async def send_dashboard_request(session, item):
     params = {
@@ -90,9 +87,9 @@ async def send_dashboard_request(session, item):
     try:
         async with session.get(DASHBOARD_URL, params=params, headers=headers) as response:
             return "Success" if response.status == 200 else "Fail"
-    except Exception:
+    except Exception as e:
+        print(f"Error sending dashboard request for {item['phone']}: {str(e)}")
         return "Fail"
-
 
 async def process_item(session, item, pbar, counters):
     phone = item["phone"]
@@ -120,28 +117,22 @@ async def process_item(session, item, pbar, counters):
         "Total": counters["total"]
     })
 
-    # Print realtime log for this phone
-   
     return (dashboard_status, claim_result)
-
 
 async def process_api_requests_for_db(db_id, pbar, counters):
     api_url = f"http://139.59.69.164/v2/get/?r={db_id}"
-    # Log fetching db info
     pbar.write(f"Fetching DB: {db_id}")
     async with aiohttp.ClientSession() as session:
         json_data = await fetch_json_data(session, api_url, db_id)
         if not json_data:
             return
-        # Update total tasks for this db_id in the progress bar
         pbar.total += len(json_data)
         pbar.refresh()
         tasks = [process_item(session, item, pbar, counters) for item in json_data]
         await asyncio.gather(*tasks)
 
-
-# နောက်ဆုံး run_all() function တွင် log သိမ်းနိုင်အောင်
 async def run_all():
+    start_time = datetime.datetime.now()
     counters = {
         "total": 0,
         "dash_success": 0,
@@ -150,34 +141,49 @@ async def run_all():
         "claim_not_found": 0
     }
     
-    # Log file ဖန်တီးခြင်း
-    log_file = "bot_execution.log"
-    with open(log_file, "a", encoding="utf-8") as f:
-        f.write(f"\n\n=== Execution started at {datetime.datetime.now()} ===\n")
+    # Create output directory if not exists
+    os.makedirs("output", exist_ok=True)
     
-    try:
-        with tqdm(total=0, desc="Processing phones") as pbar:
-            db_ids = list(range(1,2))
-            for db_id in db_ids:
-                await process_api_requests_for_db(db_id, pbar, counters)
-        
-        # Final log
-        final_log = (f"\nFinal Summary -> Total Process: {counters['total']}, "
-                    f"Dashboard Success: {counters['dash_success']}, "
-                    f"Dashboard Fail: {counters['dash_fail']}, "
-                    f"Claim Found: {counters['claim_found']}, "
-                    f"Claim Not Found: {counters['claim_not_found']}")
-        
-        print(final_log)
-        with open(log_file, "a", encoding="utf-8") as f:
-            f.write(final_log)
-            
-    except Exception as e:
-        error_msg = f"\nERROR: {str(e)}"
-        print(error_msg)
-        with open(log_file, "a", encoding="utf-8") as f:
-            f.write(error_msg)
-        raise
+    with tqdm(total=0, desc="Processing phones", dynamic_ncols=True) as pbar:
+        db_ids = list(range(1, 2))  # db_id 1 through 30
+        for db_id in db_ids:
+            await process_api_requests_for_db(db_id, pbar, counters)
+    
+    # Prepare final results
+    end_time = datetime.datetime.now()
+    results = {
+        "metadata": {
+            "script_version": "1.0",
+            "start_time": start_time.isoformat(),
+            "end_time": end_time.isoformat(),
+            "duration_seconds": (end_time - start_time).total_seconds()
+        },
+        "statistics": {
+            "total_processed": counters["total"],
+            "success_rate": f"{(counters['dash_success']/counters['total'])*100:.2f}%" if counters['total'] > 0 else "0%"
+        },
+        "results": {
+            "dashboard": {
+                "success": counters["dash_success"],
+                "fail": counters["dash_fail"]
+            },
+            "claims": {
+                "found": counters["claim_found"],
+                "not_found": counters["claim_not_found"]
+            }
+        }
+    }
+    
+    # Save to JSON file
+    output_file = f"output/results_{start_time.strftime('%Y%m%d_%H%M%S')}.json"
+    with open(output_file, "w", encoding="utf-8") as f:
+        json.dump(results, f, indent=2, ensure_ascii=False)
+    
+    print(f"\nFinal results saved to {output_file}")
+    print(f"Total Processed: {counters['total']}")
+    print(f"Dashboard Success: {counters['dash_success']} | Fail: {counters['dash_fail']}")
+    print(f"Claims Found: {counters['claim_found']} | Not Found: {counters['claim_not_found']}")
 
 if __name__ == "__main__":
+    import os
     asyncio.run(run_all())

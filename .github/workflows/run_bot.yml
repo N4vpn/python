@@ -1,33 +1,33 @@
-name: Atom Claim Bot
+name: Scrape Match Data Daily
 
 on:
   schedule:
-    - cron: '0 */12 * * *'
-  workflow_dispatch:
+    - cron: '0 0 * * *'  # Runs every day at midnight UTC
+  workflow_dispatch:  # Allows manual execution
 
 jobs:
-  run-bot:
+  scrape:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
-    
+
     steps:
-    - uses: actions/checkout@v4
-    
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.11'
-    
-    - name: Install dependencies
-      run: pip install aiohttp tqdm
-      
-    - name: Run Bot
-      run: python net.py
-      
-    - name: Upload Output
-      uses: actions/upload-artifact@v4
-      with:
-        name: output-files
-        path: |
-          output.json
-          backup_*.json
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Install dependencies
+        run: pip install requests beautifulsoup4
+
+      - name: Run scraper
+        run: python net.py
+
+      - name: Commit and push changes
+        run: |
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+          git add matches.json
+          git commit -m "Auto-update matches.json" || echo "No changes to commit"
+          git push

@@ -1,13 +1,5 @@
 [
     {
-        "home_team": "Liverpool",
-        "home_logo": "https://image.azencode.com/teams/40.png",
-        "away_team": "Everton",
-        "away_logo": "https://image.azencode.com/teams/45.png",
-        "match_date": "Apr 02 - 19:00",
-        "match_link": "https://aesport.tv/live/liverpool-everton-24247.html"
-    },
-    {
         "home_team": "Fulham",
         "home_logo": "https://image.azencode.com/teams/36.png",
         "away_team": "Liverpool",
@@ -34,10 +26,10 @@
     {
         "home_team": "Liverpool",
         "home_logo": "https://image.azencode.com/teams/40.png",
-        "away_team": "Everton",
-        "away_logo": "https://image.azencode.com/teams/45.png",
-        "match_date": "Apr 02 - 19:00",
-        "match_link": "https://aesport.tv/live/liverpool-everton-24247.html"
+        "away_team": "Tottenham",
+        "away_logo": "https://image.azencode.com/teams/47.png",
+        "match_date": "Apr 27 - 15:30",
+        "match_link": "https://aesport.tv/live/liverpool-tottenham-25049.html"
     },
     {
         "home_team": "Fulham",
